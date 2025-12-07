@@ -54,5 +54,7 @@ Not included yet — API hooks are ready for connection.
 
 👤 Author
 
-Siam – LSBU ZeroDay Cybersecurity Society
+Ali Siam
+President-ZeroDay Cybersecurity Society (LSBU)
+
 Frontend & Cybersecurity Enthusiast
