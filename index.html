@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroScan - Code Vulnerability Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --cyber-green: #00FF88;
+            --cyber-green-dark: #00CC6F;
+            --terminal-black: #000000;
+            --dark-slate: #0B0F0E;
+            --soft-gray: #1D1F1E;
+            --danger-red: #FF1744;
+            --warning-yellow: #FFB300;
+            --soft-green: #00FF88;
+            --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Roboto Mono', 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--terminal-black) 0%, var(--dark-slate) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ==================== GLOBAL ANIMATIONS ==================== */
+        @keyframes glow-pulse {
+            0%, 100% { text-shadow: 0 0 10px var(--cyber-green), 0 0 20px var(--cyber-green); }
+            50% { text-shadow: 0 0 20px var(--cyber-green), 0 0 30px var(--cyber-green), 0 0 40px var(--cyber-green); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink-cursor {
+            0%, 49% { border-right: 2px solid var(--cyber-green); }
+            50%, 100% { border-right: 2px solid transparent; }
+        }
+
+        @keyframes scan-line {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        @keyframes matrix-rain {
+            0% { transform: translateY(-100%); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        @keyframes border-glow {
+            0%, 100% { box-shadow: 0 0 10px var(--cyber-green), inset 0 0 10px rgba(0, 255, 136, 0.1); }
+            50% { box-shadow: 0 0 20px var(--cyber-green), inset 0 0 20px rgba(0, 255, 136, 0.2); }
+        }
+
+        @keyframes fade-in-down {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==================== NAVBAR ==================== */
+        .navbar {
+            background: rgba(11, 15, 14, 0.9);
+            border-bottom: 2px solid var(--cyber-green);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            animation: fade-in-down 0.6s ease;
+        }
+
+        .navbar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            animation: glow-pulse 2s infinite;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-logo:hover {
+            transform: scale(1.05);
+        }
+
+        .navbar-nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .navbar-nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .navbar-nav a:hover {
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .navbar-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--cyber-green);
+            transition: width 0.3s ease;
+        }
+
+        .navbar-nav a:hover::after {
+            width: 100%;
+        }
+
+        /* ==================== BUTTONS ==================== */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--cyber-green);
+            background: transparent;
+            color: var(--cyber-green);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--cyber-green);
+            z-index: -1;
+            transition: left 0.4s ease;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            color: var(--terminal-black);
+            box-shadow: 0 0 20px var(--cyber-green);
+            text-shadow: none;
+        }
+
+        .btn-primary {
+            background: var(--cyber-green);
+            color: var(--terminal-black);
+            border-color: var(--cyber-green);
+        }
+
+        .btn-primary:hover {
+            background: var(--cyber-green-dark);
+            box-shadow: 0 0 30px var(--cyber-green);
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        /* ==================== HERO SECTION ==================== */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 90vh;
+            position: relative;
+            overflow: hidden;
+            padding: 2rem;
+            animation: fade-in-up 0.8s ease 0.2s backwards;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: 20%;
+            left: 10%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: 10%;
+            right: 15%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 20px var(--cyber-green), 0 0 40px rgba(0, 255, 136, 0.5);
+            animation: glow-pulse 3s infinite;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fade-in-up 1s ease 0.3s backwards;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fade-in-up 1s ease 0.5s backwards;
+        }
+
+        /* ==================== PAGES CONTAINER ==================== */
+        .page {
+            display: none;
+            opacity: 0;
+            animation: fade-in-up 0.6s ease forwards;
+        }
+
+        .page.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* ==================== UPLOAD PAGE ==================== */
+        .upload-container {
+            max-width: 1000px;
+            margin: 4rem auto;
+            padding: 2rem;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .upload-title {
+            font-size: 2.5rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            margin-bottom: 3rem;
+            text-align: center;
+            animation: glow-pulse 2s infinite;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .upload-card {
+            background: rgba(29, 31, 30, 0.8);
+            border: 2px solid var(--soft-gray);
+            border-radius: 8px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .upload-card:hover::before {
+            left: 100%;
+        }
+
+        .upload-card:hover {
+            border-color: var(--cyber-green);
+            box-shadow: 0 0 20px var(--cyber-green), inset 0 0 20px rgba(0, 255, 136, 0.05);
+            transform: translateY(-5px);
+        }
+
+        .upload-card.active {
+            border-color: var(--cyber-green);
+            background: rgba(0, 255, 136, 0.05);
+            box-shadow: 0 0 20px var(--cyber-green);
+        }
+
+        .upload-card.drag-over {
+            border-color: var(--cyber-green);
+            box-shadow: 0 0 30px var(--cyber-green), inset 0 0 30px rgba(0, 255, 136, 0.1);
+            background: rgba(0, 255, 136, 0.1);
+            animation: border-glow 0.6s ease;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .upload-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--cyber-green);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .upload-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        .drag-area {
+            border: 2px dashed var(--soft-gray);
+            border-radius: 6px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .drag-area:hover {
+            border-color: var(--cyber-green);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .github-input-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .github-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--soft-gray);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .github-input:focus {
+            outline: none;
+            border-color: var(--cyber-green);
+            box-shadow: 0 0 10px var(--cyber-green), inset 0 0 10px rgba(0, 255, 136, 0.1);
+        }
+
+        .github-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .file-preview {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--soft-gray);
+            border-radius: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-tree {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .file-item {
+            padding: 0.25rem 0;
+            margin-left: 1rem;
+        }
+
+        .file-item.folder::before {
+            content: '📁 ';
+            color: var(--cyber-green);
+        }
+
+        .file-item.file::before {
+            content: '📄 ';
+            color: var(--text-secondary);
+        }
+
+        /* ==================== SCANNING PAGE ==================== */
+        .scan-container {
+            max-width: 900px;
+            margin: 4rem auto;
+            padding: 2rem;
+        }
+
+        .terminal-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--cyber-green);
+            border-radius: 8px;
+            padding: 2rem;
+            font-family: 'Roboto Mono', monospace;
+            box-shadow: 0 0 30px var(--cyber-green), inset 0 0 20px rgba(0, 255, 136, 0.05);
+            animation: fade-in-up 0.6s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terminal-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-green), transparent);
+            animation: scan-line 2s infinite;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+
+        .terminal-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .terminal-btn.red { background: #FF5F57; }
+        .terminal-btn.yellow { background: #FFBD2E; }
+        .terminal-btn.green { background: var(--cyber-green); }
+
+        .terminal-title {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .terminal-content {
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .terminal-line {
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            animation: fade-in-up 0.4s ease;
+        }
+
+        .terminal-line.typing {
+            animation: typing 0.3s steps(40, end);
+            width: fit-content;
+            overflow: hidden;
+            border-right: 2px solid var(--cyber-green);
+            white-space: nowrap;
+            animation: blink-cursor 0.8s infinite;
+        }
+
+        .terminal-prompt {
+            color: var(--cyber-green);
+            margin-right: 0.5rem;
+            font-weight: 700;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 2px;
+            margin-top: 2rem;
+            overflow: hidden;
+            border: 1px solid var(--soft-gray);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyber-green), rgba(0, 255, 136, 0.5));
+            width: 0%;
+            animation: none;
+            box-shadow: 0 0 20px var(--cyber-green);
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.animating {
+            animation: none;
+        }
+
+        .scan-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-item {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid var(--cyber-green);
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            color: var(--cyber-green);
+            font-weight: 700;
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        /* ==================== DASHBOARD PAGE ==================== */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 2rem;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .dashboard-title {
+            font-size: 2.5rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            margin-bottom: 2rem;
+            animation: glow-pulse 2s infinite;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stats-card {
+            background: rgba(29, 31, 30, 0.8);
+            border: 2px solid var(--soft-gray);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.4s ease;
+            animation: fade-in-up 0.6s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card:hover {
+            border-color: var(--cyber-green);
+            box-shadow: 0 0 20px var(--cyber-green), inset 0 0 20px rgba(0, 255, 136, 0.05);
+            transform: translateY(-5px);
+        }
+
+        .stats-card.high {
+            border-color: var(--danger-red);
+        }
+
+        .stats-card.high:hover {
+            box-shadow: 0 0 20px var(--danger-red), inset 0 0 20px rgba(255, 23, 68, 0.1);
+            border-color: var(--danger-red);
+        }
+
+        .stats-card.medium {
+            border-color: var(--warning-yellow);
+        }
+
+        .stats-card.medium:hover {
+            box-shadow: 0 0 20px var(--warning-yellow), inset 0 0 20px rgba(255, 179, 0, 0.1);
+            border-color: var(--warning-yellow);
+        }
+
+        .stats-card.low {
+            border-color: var(--cyber-green);
+        }
+
+        .stats-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stats-card.high .stats-value {
+            color: var(--danger-red);
+            text-shadow: 0 0 10px var(--danger-red);
+        }
+
+        .stats-card.medium .stats-value {
+            color: var(--warning-yellow);
+            text-shadow: 0 0 10px var(--warning-yellow);
+        }
+
+        .stats-card.low .stats-value {
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .vulnerabilities-section {
+            margin-top: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--soft-gray);
+            padding-bottom: 1rem;
+        }
+
+        .table-wrapper {
+            background: rgba(29, 31, 30, 0.8);
+            border: 2px solid var(--soft-gray);
+            border-radius: 8px;
+            overflow: hidden;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(0, 0, 0, 0.6);
+            border-bottom: 2px solid var(--cyber-green);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: var(--cyber-green);
+            font-weight: 600;
+            text-shadow: 0 0 10px var(--cyber-green);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--soft-gray);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: rgba(0, 255, 136, 0.05);
+            border-left: 4px solid var(--cyber-green);
+            padding-left: 1rem;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .severity-high {
+            background: rgba(255, 23, 68, 0.2);
+            color: var(--danger-red);
+            border: 1px solid var(--danger-red);
+            text-shadow: 0 0 10px var(--danger-red);
+        }
+
+        .severity-medium {
+            background: rgba(255, 179, 0, 0.2);
+            color: var(--warning-yellow);
+            border: 1px solid var(--warning-yellow);
+            text-shadow: 0 0 10px var(--warning-yellow);
+        }
+
+        .severity-low {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--cyber-green);
+            border: 1px solid var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        /* ==================== DRAWER ==================== */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 999;
+            animation: fade-in 0.3s ease;
+        }
+
+        .drawer-overlay.active {
+            display: block;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slide-in {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .drawer {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 500px;
+            background: rgba(29, 31, 30, 0.95);
+            border-left: 2px solid var(--cyber-green);
+            box-shadow: -10px 0 40px rgba(0, 255, 136, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.4s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer.active {
+            transform: translateX(0);
+            animation: slide-in 0.4s ease;
+        }
+
+        .drawer-header {
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--soft-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 1.3rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drawer-close:hover {
+            color: var(--cyber-green);
+            transform: rotate(90deg);
+        }
+
+        .drawer-content {
+            padding: 1.5rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .drawer-section {
+            margin-bottom: 2rem;
+        }
+
+        .drawer-section-title {
+            font-size: 0.9rem;
+            color: var(--cyber-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--soft-gray);
+            border-radius: 6px;
+            padding: 1rem;
+            font-size: 0.8rem;
+            color: var(--cyber-green);
+            overflow-x: auto;
+            line-height: 1.5;
+            font-family: 'Roboto Mono', monospace;
+            position: relative;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 5px var(--cyber-green);
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--cyber-green);
+            color: var(--cyber-green);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .code-copy-btn:hover {
+            background: var(--cyber-green);
+            color: var(--terminal-black);
+            box-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        .drawer-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .drawer-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            padding: 0.3rem 0.6rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--cyber-green);
+            color: var(--cyber-green);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            text-shadow: 0 0 5px var(--cyber-green);
+        }
+
+        .drawer-actions {
+            padding: 1.5rem;
+            border-top: 2px solid var(--soft-gray);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .drawer-actions .btn {
+            flex: 1;
+            margin: 0;
+        }
+
+        /* ==================== REPORT PAGE ==================== */
+        .report-container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 2rem;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .report-title {
+            font-size: 2.5rem;
+            color: var(--cyber-green);
+            text-shadow: 0 0 10px var(--cyber-green);
+            margin-bottom: 2rem;
+            animation: glow-pulse 2s infinite;
+        }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .report-card {
+            background: rgba(29, 31, 30, 0.8);
+            border: 2px solid var(--soft-gray);
+            border-radius: 8px;
+            padding: 1.5rem;
+            animation: fade-in-up 0.6s ease;
+        }
+
+        .report-card:hover {
+            border-color: var(--cyber-green);
+            box-shadow: 0 0 20px var(--cyber-green);
+        }
+
+        .chart-container {
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+
+        .pie-chart {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(
+                var(--danger-red) 0% 45%,
+                var(--warning-yellow) 45% 70%,
+                var(--cyber-green) 70% 100%
+            );
+            margin: 0 auto 1rem;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            background: rgba(11, 15, 14, 0.9);
+            border-top: 2px solid var(--cyber-green);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 4rem;
+        }
+
+        .footer a {
+            color: var(--cyber-green);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer a:hover {
+            text-shadow: 0 0 10px var(--cyber-green);
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .upload-grid,
+            .report-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .drawer {
+                width: 100%;
+            }
+
+            .navbar-nav {
+                gap: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-logo" onclick="navigateTo('home')">⚡ ZeroScan</div>
+        <ul class="navbar-nav">
+            <li><a href="#" onclick="navigateTo('home'); return false;">Home</a></li>
+            <li><a href="#" onclick="navigateTo('dashboard'); return false;">Dashboard</a></li>
+            <li><a href="https://github.com" target="_blank" rel="noopener">Docs</a></li>
+        </ul>
+    </nav>
+
+    <!-- HOME PAGE -->
+    <div id="home" class="page active">
+        <div class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">ZeroScan</h1>
+                <p class="hero-subtitle">Find vulnerabilities before attackers do</p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary btn-lg" onclick="navigateTo('upload')">📤 Upload Code</button>
+                    <button class="btn btn-lg" onclick="navigateTo('upload')">🐙 Scan GitHub Repo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD PAGE -->
+    <div id="upload" class="page">
+        <div class="upload-container">
+            <h2 class="upload-title">Start Scanning</h2>
+            
+            <div class="upload-grid">
+                <!-- UPLOAD CODE CARD -->
+                <div class="upload-card active" id="uploadCard" onclick="selectUploadMethod('file')">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-label">Upload Code</div>
+                    <div class="upload-description">Drag & drop or click to select files</div>
+                    <div class="drag-area" id="dragArea">
+                        <p style="color: var(--text-secondary); margin: 0;">📄 Choose files or drag here</p>
+                    </div>
+                    <input type="file" id="fileInput" class="upload-input" multiple accept=".js,.py,.java,.cpp,.c,.ts,.jsx,.tsx" />
+                    <div id="filePreview" class="file-preview" style="display: none;">
+                        <div class="file-tree" id="fileTree"></div>
+                    </div>
+                </div>
+
+                <!-- GITHUB CARD -->
+                <div class="upload-card" id="githubCard" onclick="selectUploadMethod('github')">
+                    <div class="upload-icon">🐙</div>
+                    <div class="upload-label">GitHub Repository</div>
+                    <div class="upload-description">Enter repository URL to scan</div>
+                    <div class="github-input-container">
+                        <input type="text" id="githubInput" class="github-input" placeholder="github.com/username/repo" />
+                        <button class="btn btn-primary" onclick="scanGithub()">Scan</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <button class="btn btn-primary btn-lg" onclick="startScan()" style="min-width: 200px;">🔍 Start Scan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCANNING PAGE -->
+    <div id="scan" class="page">
+        <div class="scan-container">
+            <div class="terminal-box">
+                <div class="terminal-header">
+                    <div class="terminal-btn red"></div>
+                    <div class="terminal-btn yellow"></div>
+                    <div class="terminal-btn green"></div>
+                    <div class="terminal-title">zeroscan-terminal</div>
+                </div>
+                <div class="terminal-content" id="terminalContent"></div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="scan-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Files</div>
+                    <div class="stat-value" id="filesCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Languages</div>
+                    <div class="stat-value" id="languagesCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Progress</div>
+                    <div class="stat-value" id="progressPercent">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD PAGE -->
+    <div id="dashboard" class="page">
+        <div class="dashboard-container">
+            <h2 class="dashboard-title">Scan Results</h2>
+
+            <!-- STATS CARDS -->
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <div class="stats-icon">🔴</div>
+                    <div class="stats-label">High Severity</div>
+                    <div class="stats-value" id="highCount">12</div>
+                </div>
+                <div class="stats-card medium">
+                    <div class="stats-icon">🟡</div>
+                    <div class="stats-label">Medium Severity</div>
+                    <div class="stats-value" id="mediumCount">28</div>
+                </div>
+                <div class="stats-card low">
+                    <div class="stats-icon">🟢</div>
+                    <div class="stats-label">Low Severity</div>
+                    <div class="stats-value" id="lowCount">45</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">📁</div>
+                    <div class="stats-label">Files Scanned</div>
+                    <div class="stats-value" id="filesScanned">142</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">🐍</div>
+                    <div class="stats-label">Languages</div>
+                    <div class="stats-value" id="languagesDetected">5</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">⚠️</div>
+                    <div class="stats-label">Total Issues</div>
+                    <div class="stats-value" id="totalIssues">85</div>
+                </div>
+            </div>
+
+            <!-- VULNERABILITIES TABLE -->
+            <div class="vulnerabilities-section">
+                <h3 class="section-title">🔍 Vulnerabilities</h3>
+                <div class="table-wrapper">
+                    <table id="vulnTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">Severity</th>
+                                <th style="width: 25%;">File</th>
+                                <th style="width: 10%;">Line</th>
+                                <th style="width: 35%;">Type</th>
+                                <th style="width: 15%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vulnTableBody">
+                            <!-- Generated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT PAGE -->
+    <div id="report" class="page">
+        <div class="report-container">
+            <h2 class="report-title">Scan Report</h2>
+            
+            <div class="report-grid">
+                <div class="report-card">
+                    <h3 class="section-title">Vulnerability Distribution</h3>
+                    <div class="chart-container">
+                        <div class="pie-chart"></div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <div class="legend-dot" style="background: var(--danger-red);"></div>
+                                <span>High: 12 (14%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-dot" style="background: var(--warning-yellow);"></div>
+                                <span>Medium: 28 (33%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-dot" style="background: var(--cyber-green);"></div>
+                                <span>Low: 45 (53%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-card">
+                    <h3 class="section-title">Scan Summary</h3>
+                    <div style="padding: 1rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Files Scanned</div>
+                            <div style="color: var(--cyber-green); font-size: 1.5rem; font-weight: 700; text-shadow: 0 0 10px var(--cyber-green);">142</div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Languages Detected</div>
+                            <div style="color: var(--cyber-green); font-size: 1.5rem; font-weight: 700; text-shadow: 0 0 10px var(--cyber-green);">5</div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Scan Duration</div>
+                            <div style="color: var(--cyber-green); font-size: 1.5rem; font-weight: 700; text-shadow: 0 0 10px var(--cyber-green);">3.2s</div>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;" onclick="exportPDF()">📥 Export PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAWER -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <div class="drawer-title" id="drawerTitle">Vulnerability Details</div>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-content" id="drawerContent">
+            <!-- Generated by JavaScript -->
+        </div>
+        <div class="drawer-actions">
+            <button class="btn" onclick="copyFix()">📋 Copy Fix</button>
+            <button class="btn btn-primary" onclick="closeDrawer()">Close</button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>© 2025 ZeroScan. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+    </footer>
+
+    <script>
+        // ==================== STATE MANAGEMENT ====================
+        const state = {
+            currentPage: 'home',
+            uploadMethod: 'file',
+            selectedVuln: null,
+            scanProgress: 0,
+            files: [],
+            vulnerabilities: [
+                {
+                    id: 1,
+                    severity: 'high',
+                    file: 'src/auth/login.js',
+                    line: 42,
+                    type: 'SQL Injection',
+                    description: 'User input is directly concatenated into SQL query without parameterization',
+                    risk: 'Attackers can bypass authentication or extract sensitive data',
+                    fix: `const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
+db.query(query, [email, password]);`,
+                    vulnerable: `const query = 'SELECT * FROM users WHERE email = "' + email + '" AND password = "' + password + '"';
+db.query(query);`,
+                    owasp: 'A03:2021 – Injection'
+                },
+                {
+                    id: 2,
+                    severity: 'high',
+                    file: 'api/routes/user.py',
+                    line: 78,
+                    type: 'Hardcoded Credentials',
+                    description: 'API key is hardcoded in source code',
+                    risk: 'Secret exposure in version control',
+                    fix: `import os
+api_key = os.getenv('STRIPE_API_KEY')`,
+                    vulnerable: `api_key = "sk_live_abc123xyz789"`,
+                    owasp: 'A02:2021 – Cryptographic Failures'
+                },
+                {
+                    id: 3,
+                    severity: 'medium',
+                    file: 'components/UserProfile.tsx',
+                    line: 156,
+                    type: 'Cross-Site Scripting (XSS)',
+                    description: 'Unsanitized user input is directly rendered in HTML',
+                    risk: 'Session hijacking, malware injection',
+                    fix: `import DOMPurify from 'dompurify';
+return <div>{DOMPurify.sanitize(userInput)}</div>;`,
+                    vulnerable: `return <div dangerouslySetInnerHTML={{__html: userInput}} />;`,
+                    owasp: 'A07:2021 – Cross-Site Scripting'
+                },
+                {
+                    id: 4,
+                    severity: 'medium',
+                    file: 'middleware/auth.js',
+                    line: 34,
+                    type: 'Weak Password Validation',
+                    description: 'Password requirements are insufficient',
+                    risk: 'Brute force attacks succeed easily',
+                    fix: `const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$/;`,
+                    vulnerable: `if (password.length < 6) throw new Error('Invalid password');`,
+                    owasp: 'A07:2021 – Authentication'
+                },
+                {
+                    id: 5,
+                    severity: 'low',
+                    file: 'utils/helpers.ts',
+                    line: 89,
+                    type: 'Insecure Deserialization',
+                    description: 'JSON parsing without validation',
+                    risk: 'Remote code execution in some contexts',
+                    fix: `const schema = z.object({ name: z.string() });
+const data = schema.parse(JSON.parse(input));`,
+                    vulnerable: `const data = JSON.parse(userInput);`,
+                    owasp: 'A08:2021 – Insecure Deserialization'
+                }
+            ]
+        };
+
+        // ==================== PAGE NAVIGATION ====================
+        function navigateTo(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+            state.currentPage = page;
+            window.scrollTo(0, 0);
+        }
+
+        // ==================== UPLOAD FUNCTIONALITY ====================
+        function selectUploadMethod(method) {
+            state.uploadMethod = method;
+            document.getElementById('uploadCard').classList.toggle('active');
+            document.getElementById('githubCard').classList.toggle('active');
+        }
+
+        const dragArea = document.getElementById('dragArea');
+        const fileInput = document.getElementById('fileInput');
+
+        dragArea.addEventListener('click', () => fileInput.click());
+
+        dragArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            document.getElementById('uploadCard').classList.add('drag-over');
+        });
+
+        dragArea.addEventListener('dragleave', () => {
+            document.getElementById('uploadCard').classList.remove('drag-over');
+        });
+
+        dragArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            document.getElementById('uploadCard').classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            state.files = Array.from(files);
+            const preview = document.getElementById('filePreview');
+            const fileTree = document.getElementById('fileTree');
+
+            fileTree.innerHTML = state.files.map(file => {
+                const ext = file.name.split('.').pop();
+                return `<div class="file-item file">
+                    <strong>${file.name}</strong> <span style="color: var(--text-secondary);">(${(file.size / 1024).toFixed(2)} KB)</span>
+                </div>`;
+            }).join('');
+
+            preview.style.display = 'block';
+        }
+
+        function scanGithub() {
+            const url = document.getElementById('githubInput').value;
+            if (url) {
+                state.files = [{name: url}];
+                startScan();
+            }
+        }
+
+        // ==================== SCANNING ANIMATION ====================
+        function startScan() {
+            navigateTo('scan');
+            const terminal = document.getElementById('terminalContent');
+            terminal.innerHTML = '';
+            state.scanProgress = 0;
+
+            const lines = [
+                '> Initializing ZeroScan engine...',
+                '> Loading security modules...',
+                '> Parsing source files...',
+                '> Analyzing code patterns...',
+                '> Detecting vulnerabilities...',
+                '> Cross-referencing OWASP database...',
+                '> Generating insights...',
+                '> Scan Complete! ✓'
+            ];
+
+            let lineIndex = 0;
+            const interval = setInterval(() => {
+                if (lineIndex < lines.length) {
+                    const line = document.createElement('div');
+                    line.className = 'terminal-line';
+                    line.innerHTML = `<span class="terminal-prompt">>></span> ${lines[lineIndex]}`;
+                    terminal.appendChild(line);
+
+                    state.scanProgress = Math.round((lineIndex / lines.length) * 100);
+                    document.getElementById('progressFill').style.width = state.scanProgress + '%';
+                    document.getElementById('progressPercent').textContent = state.scanProgress + '%';
+                    document.getElementById('filesCount').textContent = Math.floor(state.scanProgress / 10);
+                    document.getElementById('languagesCount').textContent = Math.min(5, Math.ceil(state.scanProgress / 20));
+
+                    terminal.scrollTop = terminal.scrollHeight;
+                    lineIndex++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        generateDashboard();
+                        navigateTo('dashboard');
+                    }, 1500);
+                }
+            }, 600);
+        }
+
+        // ==================== DASHBOARD GENERATION ====================
+        function generateDashboard() {
+            const highCount = state.vulnerabilities.filter(v => v.severity === 'high').length;
+            const mediumCount = state.vulnerabilities.filter(v => v.severity === 'medium').length;
+            const lowCount = state.vulnerabilities.filter(v => v.severity === 'low').length;
+
+            document.getElementById('highCount').textContent = highCount;
+            document.getElementById('mediumCount').textContent = mediumCount;
+            document.getElementById('lowCount').textContent = lowCount;
+            document.getElementById('totalIssues').textContent = highCount + mediumCount + lowCount;
+            document.getElementById('filesScanned').textContent = Math.floor(Math.random() * 50) + 100;
+            document.getElementById('languagesDetected').textContent = Math.floor(Math.random() * 3) + 3;
+
+            const tbody = document.getElementById('vulnTableBody');
+            tbody.innerHTML = state.vulnerabilities.map(vuln => {
+                const severityClass = `severity-${vuln.severity}`;
+                const severityIcon = vuln.severity === 'high' ? '🔥' : vuln.severity === 'medium' ? '⚠️' : '🟢';
+                return `
+                    <tr onclick="openDrawer(${vuln.id})">
+                        <td><span class="severity-badge ${severityClass}">${severityIcon} ${vuln.severity.toUpperCase()}</span></td>
+                        <td>${vuln.file}</td>
+                        <td>${vuln.line}</td>
+                        <td>${vuln.type}</td>
+                        <td><button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">View</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ==================== DRAWER FUNCTIONALITY ====================
+        function openDrawer(vulnId) {
+            const vuln = state.vulnerabilities.find(v => v.id === vulnId);
+            if (!vuln) return;
+
+            state.selectedVuln = vuln;
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawerOverlay');
+            const content = document.getElementById('drawerContent');
+
+            const severityColor = vuln.severity === 'high' ? '#FF1744' : vuln.severity === 'medium' ? '#FFB300' : '#00FF88';
+
+            content.innerHTML = `
+                <div class="drawer-section">
+                    <div class="drawer-section-title">Vulnerability Info</div>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="color: ${severityColor}; font-size: 1.5rem;">
+                            ${vuln.severity === 'high' ? '🔥' : vuln.severity === 'medium' ? '⚠️' : '🟢'}
+                        </div>
+                        <div>
+                            <div style="color: var(--text-primary); font-weight: 600;">${vuln.type}</div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem;">${vuln.file}:${vuln.line}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drawer-section">
+                    <div class="drawer-section-title">Description</div>
+                    <p class="drawer-text">${vuln.description}</p>
+                </div>
+
+                <div class="drawer-section">
+                    <div class="drawer-section-title">Risk Impact</div>
+                    <p class="drawer-text">${vuln.risk}</p>
+                </div>
+
+                <div class="drawer-section">
+                    <div class="drawer-section-title">Vulnerable Code</div>
+                    <div class="code-block">${escapeHtml(vuln.vulnerable)}</div>
+                </div>
+
+                <div class="drawer-section">
+                    <div class="drawer-section-title">Secure Code Example</div>
+                    <div class="code-block">
+                        <button class="code-copy-btn" onclick="copyToClipboard(\`${vuln.fix}\`)">Copy</button>
+                        ${escapeHtml(vuln.fix)}
+                    </div>
+                </div>
+
+                <div class="drawer-section">
+                    <div class="drawer-section-title">OWASP Reference</div>
+                    <div class="tag">${vuln.owasp}</div>
+                </div>
+            `;
+
+            drawer.classList.add('active');
+            overlay.classList.add('active');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('active');
+            document.getElementById('drawerOverlay').classList.remove('active');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Code copied to clipboard!');
+            });
+        }
+
+        function copyFix() {
+            if (state.selectedVuln) {
+                copyToClipboard(state.selectedVuln.fix);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ==================== EXPORT FUNCTIONALITY ====================
+        function exportPDF() {
+            alert('PDF export would be generated here using a backend service or library like jsPDF');
+        }
+    </script>
+</body>
+</html>
